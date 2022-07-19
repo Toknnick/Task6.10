@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Task6._10
@@ -18,30 +18,36 @@ namespace Task6._10
         {
             Random random = new Random();
             List<int> uniquePower = new List<int>();
-            Platoon firstCountry = new Platoon(random, uniquePower);
-            Platoon secondCountry = new Platoon(random, uniquePower);
-            List<Soldier> soldiersOfFirstCountry = firstCountry.PrapareToBattle();
-            List<Soldier> soldiersOfSecondCountry = secondCountry.PrapareToBattle();
+            List<int> uniqueHealth = new List<int>();
+            List<string> logs = new List<string>();
             int numberOfSoldier = 0;
             int losingCountryNumber = 0;
-            bool fight = true;
+            int totalSoldiers = 0;
+            bool isFight = true;
+            Platoon firstCountry = new Platoon(random, uniquePower, uniqueHealth, ref totalSoldiers);
+            Platoon secondCountry = new Platoon(random, uniquePower, uniqueHealth, ref totalSoldiers);
+            List<Soldier> soldiersOfFirstCountry = firstCountry.PrapareToBattle();
+            List<Soldier> soldiersOfSecondCountry = secondCountry.PrapareToBattle();
 
-            while (fight)
+            while (isFight)
             {
-                Console.WriteLine("1.Показать бойцов стран. \n2.Начать бой. \n3.Выход. \nВыберите вариант:");
+                Console.WriteLine("1.Показать бойцов стран. \n2.Начать бой. \n3.Просмотреть логи. \n4.Выход. \nВыберите вариант:");
                 string userInput = Console.ReadLine();
                 Console.Clear();
 
                 switch (userInput)
                 {
                     case "1":
-                        IntroduceCountries(firstCountry, secondCountry);
+                        IntroduceCountries(soldiersOfFirstCountry, soldiersOfSecondCountry, firstCountry, secondCountry);
                         break;
                     case "2":
-                        Fight(firstCountry, secondCountry, soldiersOfFirstCountry, soldiersOfSecondCountry, numberOfSoldier, ref losingCountryNumber);
+                        Fight(firstCountry, secondCountry, soldiersOfFirstCountry, soldiersOfSecondCountry, numberOfSoldier, ref losingCountryNumber, logs);
                         break;
                     case "3":
-                        fight = false;
+                        ShowLogs(logs);
+                        break;
+                    case "4":
+                        isFight = false;
                         break;
                 }
 
@@ -51,26 +57,49 @@ namespace Task6._10
             }
         }
 
-        private void Fight(Platoon firstCountry, Platoon secondCountry, List<Soldier> soldiersOfFirstCountry, 
-                                                                        List<Soldier> soldiersOfSecondCountry, int numberOfSoldier, ref int losingCountryNumber)
+        private void IntroduceCountries(List<Soldier> soldiersOfFirstCountry, List<Soldier> soldiersOfSecondCountry, Platoon firstCountry, Platoon secondCountry)
         {
+            int numberOfCountry = 1;
+            ShowSoldiersOfCountry(soldiersOfFirstCountry, firstCountry, numberOfCountry);
+            numberOfCountry = 2;
+            ShowSoldiersOfCountry(soldiersOfSecondCountry, secondCountry, numberOfCountry);
+        }
+
+        private void Fight(Platoon firstCountry, Platoon secondCountry, List<Soldier> soldiersOfFirstCountry,
+                                                                        List<Soldier> soldiersOfSecondCountry, int numberOfSoldier, ref int losingCountryNumber, List<string> logs)
+        {
+            int numberOfFirstCountry = 1;
+            int numberOfSecondCountry = 2;
+            int optionAddingLogs = 0;
+
             if (soldiersOfFirstCountry.Count > 0 && soldiersOfSecondCountry.Count > 0)
             {
-                bool fight = true;
-                IntroduceCountries(firstCountry, secondCountry);
+                bool isFight = true;
+                IntroduceCountries(soldiersOfFirstCountry, soldiersOfSecondCountry, firstCountry, secondCountry);
 
-                while (fight)
+                while (isFight)
                 {
-                    if (soldiersOfFirstCountry[numberOfSoldier].Power > soldiersOfSecondCountry[numberOfSoldier].Power)
+                    if (soldiersOfFirstCountry[numberOfSoldier].Power >= soldiersOfSecondCountry[numberOfSoldier].Health)
                     {
+                        optionAddingLogs = 1;
+                        logs.Add(AddLogs(soldiersOfFirstCountry, soldiersOfSecondCountry, optionAddingLogs, numberOfSoldier,numberOfFirstCountry));
                         soldiersOfSecondCountry.RemoveAt(numberOfSoldier);
+                    }
+                    else if (soldiersOfSecondCountry[numberOfSoldier].Power >= soldiersOfFirstCountry[numberOfSoldier].Health)
+                    {
+                        optionAddingLogs = 1;
+                        logs.Add(AddLogs(soldiersOfSecondCountry, soldiersOfFirstCountry, optionAddingLogs, numberOfSoldier, numberOfSecondCountry));
+                        soldiersOfFirstCountry.RemoveAt(numberOfSoldier);
                     }
                     else
                     {
-                        soldiersOfFirstCountry.RemoveAt(numberOfSoldier);
+                        optionAddingLogs = 2;
+                        logs.Add(AddLogs(soldiersOfSecondCountry, soldiersOfFirstCountry, optionAddingLogs, numberOfSoldier));
+                        soldiersOfFirstCountry[numberOfSoldier].TakeDamage(soldiersOfSecondCountry[numberOfSoldier].Power);
+                        soldiersOfSecondCountry[numberOfSoldier].TakeDamage(soldiersOfFirstCountry[numberOfSoldier].Power);
                     }
 
-                    fight = IsLose(firstCountry, secondCountry, ref losingCountryNumber);
+                    isFight = IsLose(firstCountry, secondCountry, ref losingCountryNumber);
                 }
             }
             else
@@ -80,18 +109,47 @@ namespace Task6._10
             }
         }
 
-        private void ShowSoldiersOfCountry(Platoon country, int numberOfCountry)
+        private void ShowLogs(List<string> logs)
+        {
+            if (logs.Count > 0)
+            {
+                foreach (string log in logs)
+                {
+                    Console.WriteLine(log);
+                }
+            }
+            else
+            {
+                Console.WriteLine("Логи пусты!");
+            }
+        }
+
+        private string AddLogs(List<Soldier> firstCountry, List<Soldier> secondCountry, int optionAddingLogs, int numberOfSoldier, int numberOfCountry = 0)
+        {
+            string text = "";
+
+            if (optionAddingLogs == 1)
+            {
+                text = $"Боец {firstCountry[numberOfSoldier].Name} страны номер {numberOfCountry} убил(а) вражеского бойца {secondCountry[numberOfSoldier].Name}.";
+            }
+            else
+            {
+                text = $"Боец {firstCountry[numberOfSoldier].Name} нанес(ла) урон вражескому бойцу " +
+                       $"{secondCountry[numberOfSoldier].Name} и получил(а) урон в ответ";
+            }
+
+            return text;
+        }
+
+        private void ShowSoldiersOfCountry(List<Soldier> soldiersOfCountry, Platoon country, int numberOfCountry)
         {
             Console.WriteLine($" \nСтрана номер {numberOfCountry}: \n");
             country.ShowSoldiers();
-        }
 
-        private void IntroduceCountries(Platoon firstCountry, Platoon secondCountry)
-        {
-            int numberOfCountry = 1;
-            ShowSoldiersOfCountry(firstCountry, numberOfCountry);
-            numberOfCountry = 2;
-            ShowSoldiersOfCountry(secondCountry, numberOfCountry);
+            if (soldiersOfCountry.Count > 0)
+            {
+                Console.WriteLine($"Военная мощь страны: {GetTotalPowerOfCountry(soldiersOfCountry)}");
+            }
         }
 
         private bool IsLose(Platoon firstCountry, Platoon secondCountry, ref int losingCountryNumber)
@@ -122,15 +180,29 @@ namespace Task6._10
         {
             Console.WriteLine($"Страна номер {losingCountryNumber} приняла поражение!");
         }
+
+        private int GetTotalPowerOfCountry(List<Soldier> soldiersOfCountry)
+        {
+            int totalPowerOfCountry = 0;
+            if (soldiersOfCountry.Count > 0)
+            {
+                for (int i = 0; i < soldiersOfCountry.Count; i++)
+                {
+                    totalPowerOfCountry += soldiersOfCountry[i].Power;
+                }
+            }
+
+            return totalPowerOfCountry;
+        }
     }
 
     class Platoon
     {
         private List<Soldier> _soldiers = new List<Soldier>();
 
-        public Platoon(Random random, List<int> uniquePower)
+        public Platoon(Random random, List<int> uniquePower, List<int> uniqueHealth, ref int totalSoldiers)
         {
-            AddSoldiers(random, uniquePower);
+            AddSoldiers(random, uniquePower, uniqueHealth, ref totalSoldiers);
         }
 
         public List<Soldier> PrapareToBattle()
@@ -144,7 +216,7 @@ namespace Task6._10
             {
                 for (int i = 0; i < _soldiers.Count; i++)
                 {
-                    _soldiers[i].ShowInfo(i + 1);
+                    _soldiers[i].ShowInfo();
                 }
             }
             else
@@ -165,41 +237,101 @@ namespace Task6._10
             return isLive;
         }
 
-        private void AddSoldiers(Random random, List<int> uniquePower)
+        private void AddSoldiers(Random random, List<int> uniquePower, List<int> uniqueHealth, ref int totalSoldiers)
         {
             int minSoldiers = 10;
             int maxSoldiers = 20;
             int minValue = 50;
-            int maxValuePower = 100;
+            int maxValue = 100;
+            int numberOfName = 0;
             int countOfSoldiers = random.Next(minSoldiers, maxSoldiers);
 
             for (int i = 0; i < countOfSoldiers;)
             {
-                int power = random.Next(minValue, maxValuePower);
+                int health = random.Next(minValue, maxValue);
+                int power = random.Next(minValue, maxValue);
                 bool isUniquePower = uniquePower.Contains(power);
+                bool isUniqueHealth = uniqueHealth.Contains(health);
 
-                if (isUniquePower == false)
+                if (isUniquePower == false && isUniqueHealth == false)
                 {
                     uniquePower.Add(power);
-                    _soldiers.Add(new Soldier(power));
+                    uniqueHealth.Add(health);
+                    _soldiers.Add(new Soldier((NamesOfSoldiers)(numberOfName + totalSoldiers), health, power));
                     i++;
+                    totalSoldiers++;
                 }
             }
         }
     }
 
+    enum NamesOfSoldiers
+    {
+        Amy,
+        Roy,
+        Jack,
+        Rose,
+        Jean,
+        Toni,
+        Ruby,
+        Gary,
+        John,
+        Billy,
+        James,
+        Megan,
+        Marie,
+        Diane,
+        Annie,
+        Kevin,
+        Frank,
+        Donald,
+        Johnny,
+        Willie,
+        Gladys,
+        Marion,
+        Edward,
+        Thomas,
+        Carrie,
+        Robert,
+        Bessie,
+        Adrian,
+        Steven,
+        Sheila,
+        Joseph,
+        Frances,
+        Beverly,
+        Barbara,
+        Dorothy,
+        Michael,
+        Richard,
+        Veronica,
+        Victoria,
+        Jennifer,
+    }
+
     class Soldier
     {
+        public NamesOfSoldiers Name { get; private set; }
+
+        public int Health { get; private set; }
         public int Power { get; private set; }
 
-        public Soldier(int power)
+        public Soldier(NamesOfSoldiers name, int health, int power)
         {
+            Health = health;
             Power = power;
+            Name = name;
         }
 
-        public void ShowInfo(int id)
+        public void TakeDamage(int power)
         {
-            Console.WriteLine($"Боец номер {id}. Сила: {Power}.");
+            float armor = 0.6f;
+            Health -= (int)(power * armor);
+        }
+
+        public void ShowInfo()
+        {
+            Console.WriteLine($"Боец {Name}. Здоровье: {Health}. Сила: {Power}.");
         }
     }
 }
